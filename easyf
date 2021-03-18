@@ -1,0 +1,150 @@
+#!/usr/bin/env python3 
+import os 
+import csv
+import pickle 
+import argparse as agp
+import sys 
+from tabulate import tabulate
+
+class readFile:
+	def __init__(self,filename,mode):
+		self.createfile(filename)
+		ext=os.path.splitext(filename)[1]
+		if ext in (".csv",".xlsx"):
+			self.type="csv"
+		elif ext in (".dat"):
+			self.type="bin"
+		else:
+			self.type="txt"
+		self.file=open(filename,mode)
+		self.mode=mode
+
+	def createfile(self,filename):
+		if not os.path.isfile(filename):
+			if input("Do you want to create a new file [y/n] ")=="y":
+				with open(filename,"w") as file:
+					print(f"File {filename} Created")
+			else:
+				print("Ok")
+
+	def read_csv(self):
+		if self.type=="csv":
+			self.file.seek(0,0)
+			try:
+				reader=csv.reader(self.file)
+				headers,*table=list(reader)
+			except ValueError:
+				print("\nFile has no Values\n")
+				return None
+
+			print(tabulate(table, headers, tablefmt="psql"))	
+			return headers
+		else:
+			raise ValueError("Not a CSV file")
+
+
+	def read_txt(self):
+		content=self.file.read().splitlines()
+		for line in content:
+			print(line)
+
+	def read_bin(self):
+		if self.type=="bin":
+			content=pickle.load(self.file)
+			print(content)	
+		else:
+			raise ValueError("Not a binary file")
+
+class writeFile(readFile):
+	def __init__(self,filename,mode):
+		super().__init__(filename,mode)
+	
+	def write_csv(self):
+		if self.type=="csv":
+			if not self.mode in ("r+","a+","a"):
+				content=[]
+				fieldname=input("Comma seperated fieldnames\n").strip().split(" ")
+				for i in range(int(input("Number of entries : "))):
+					elements=[]
+					for j in range(len(fieldname)):
+						value=input(f"Entry for {fieldname[j]} ")
+						elements.append(value)
+					content.append(elements)
+				
+				writer=csv.writer(self.file)
+				writer.writerow(fieldname)
+				writer.writerows(content)
+			else :
+				if self.mode in ("r+","a+"):
+					header=self.read_csv()
+				writer=csv.writer(self.file)
+				if header:
+					for i in range(int(input("How many Entries do you want "))):
+						elements=[]
+						for j in range(len(header)):
+							value=input(f"Entry for {header[j]} ")
+							elements.append(value)
+						writer.writerow(elements)
+				else :
+					print("You can add entries if you want\nOr press ctrl+d to exit\n")
+					self.mode="w"
+					self.write_csv()
+		else:
+			raise ValueError("Not a CSV file")
+
+	def write_txt(self):
+		if self.mode in ("r+","a+"):
+			self.read_txt()
+		content=sys.stdin.readlines()
+		self.file.seek(0,1)
+		self.file.writelines(content)
+	
+	def write_bin(self):
+		if self.type=="bin":
+			pass 
+		
+parser=agp.ArgumentParser(prog="easyf",epilog="Read and Write files easier")
+parser.add_argument("name",help="File name",nargs=1)
+parser.add_argument("mode",help="Mode with which You wanna open it")
+args=parser.parse_args()
+
+def main(mode):	
+	if mode in ("w","w+","wb","wb+","r+","a+"):
+		file=writeFile(args.name[0],mode)
+		if input("Do you want to write in this file [y/n] ")=="y":	
+			cases={
+					"csv":file.write_csv,
+					"bin":file.write_bin,
+					"txt":file.write_txt
+					}
+			func=cases.get(file.type,None)
+			if func:
+				func()
+			else:
+				print("So you hacked me aight ?")
+		else:
+			print("File Closed")
+
+	elif mode in ("r","r+","rb","rb+","a+"):
+		file=readFile(args.name[0],mode)
+		cases={
+				"csv":file.read_csv,
+				"bin":file.read_bin,
+				"txt":file.read_txt
+				}
+		func=cases.get(file.type,None)
+		if func:
+			func()
+		else:
+			print("So you hacked me aight ?")
+	elif mode=="a":
+		main("a+")
+	
+	elif mode=="c":
+		if input("You sure you want to earse the content of the file [y/n] ")=="y":
+			file=writeFile(args.name[0],"w")
+			file.file.write(""),file.file.close()
+			
+
+if __name__=="__main__":
+	main(mode=args.mode)
