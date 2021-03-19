@@ -16,6 +16,7 @@ class readFile:
 			self.type="bin"
 		else:
 			self.type="txt"
+		self.filename=filename
 		self.file=open(filename,mode)
 		self.mode=mode
 
@@ -33,6 +34,7 @@ class readFile:
 			try:
 				reader=csv.reader(self.file)
 				headers,*table=list(reader)
+				self.content=[headers,table]
 			except ValueError:
 				print("\nFile has no Values\n")
 				return None
@@ -77,18 +79,21 @@ class writeFile(readFile):
 			else :
 				if self.mode in ("r+","a+"):
 					header=self.read_csv()
-				writer=csv.writer(self.file)
-				if header:
-					for i in range(int(input("How many Entries do you want "))):
-						elements=[]
-						for j in range(len(header)):
-							value=input(f"Entry for {header[j]} ")
-							elements.append(value)
-						writer.writerow(elements)
-				else :
-					print("You can add entries if you want\nOr press ctrl+d to exit\n")
-					self.mode="w"
-					self.write_csv()
+				if input("Do you want to add column in file [y/n] ")=="y":
+					self.add_column()
+				if input("Do you want to add rows now [y/n] ")=="y":
+					writer=csv.writer(self.file)
+					if header:
+						for i in range(int(input("How many Entries do you want "))):
+							elements=[]
+							for j in range(len(header)):
+								value=input(f"Entry for {header[j]} ")
+								elements.append(value)
+							writer.writerow(elements)
+					else :
+						print("You can add entries if you want\nOr press ctrl+d to exit\n")
+						self.mode="w"
+						self.write_csv()
 		else:
 			raise ValueError("Not a CSV file")
 
@@ -102,7 +107,30 @@ class writeFile(readFile):
 	def write_bin(self):
 		if self.type=="bin":
 			pass 
-		
+
+	def add_column(self):	
+		reader=self.content
+		headers,*tables=reader 
+		l,new,values=len(tables),[],[]	
+		for i in range(int(input("Number of column(s) to add : "))):
+			field=input("Enter the name of the column you want to add ")
+			new.append(field)
+			headers.append(field)
+		for j in range(l):
+			for head in new:
+				value=input(f"Enter value for {head} ")
+				tables[j][0].extend([value])
+				print(tables)
+		file=open(self.filename,"w")
+		writer=csv.writer(file) 
+		writer.writerow(headers)
+		for table in tables:
+			writer.writerows(table)
+
+		file.close()
+
+
+
 parser=agp.ArgumentParser(prog="easyf",epilog="Read and Write files easier")
 parser.add_argument("name",help="File name",nargs=1)
 parser.add_argument("mode",help="Mode with which You wanna open it")
